@@ -9,6 +9,7 @@ interface IConnectionData {
   connectionData: string[];
   correctAnswers: { category: string; answers: string[] }[];
   selectedConnections: string[];
+  triesRemaining: number;
 }
 
 const correctAnsColor = [
@@ -23,9 +24,11 @@ export default function IndexPage() {
     connectionData: [],
     correctAnswers: [],
     selectedConnections: [],
+    triesRemaining: 4,
   });
 
-  const panelPress = (word: string) => {
+  const panelPress = (word: string, isPressable: boolean) => {
+    if (!isPressable) return;
     if (!connectionData.selectedConnections.includes(word))
       setConnectionData({
         ...connectionData,
@@ -41,6 +44,8 @@ export default function IndexPage() {
   };
 
   const submit = () => {
+    if (connectionData.selectedConnections.length !== 4) return;
+
     let data = JSON.stringify({
       attemptString: connectionData.selectedConnections.join(),
     });
@@ -60,6 +65,7 @@ export default function IndexPage() {
       .then((response) => {
         if (response.data) {
           setConnectionData({
+            ...connectionData,
             connectionData: connectionData.connectionData.filter(
               (word) => !connectionData.selectedConnections.includes(word)
             ),
@@ -73,6 +79,12 @@ export default function IndexPage() {
           });
         }
         // else lose a try
+        else {
+          setConnectionData({
+            ...connectionData,
+            triesRemaining: connectionData.triesRemaining - 1,
+          });
+        }
       })
       .catch((error) => {
         console.log(error);
@@ -86,6 +98,18 @@ export default function IndexPage() {
   }, []);
 
   const isMaxSelected = connectionData.selectedConnections.length === 4;
+
+  const circle = (
+    <svg height="1.5rem" width="1.5rem">
+      <circle cx=".75rem" cy=".75rem" fill="gray" r=".375rem" />
+    </svg>
+  );
+
+  const rows = [];
+
+  for (let i = 0; i < connectionData.triesRemaining; i++) {
+    rows.push(<div key={i}>{circle}</div>);
+  }
 
   return (
     <DefaultLayout>
@@ -111,33 +135,41 @@ export default function IndexPage() {
       <div className="grid grid-cols-4 gap-4">
         {connectionData.connectionData.map((word) => (
           <div key={word} className="flex items-center justify-center">
-            <Card
+            <div
+              key={word}
               className="flex inline-block max-w-lg text-center justify-center"
-              isPressable={
-                !isMaxSelected ||
-                connectionData.selectedConnections.includes(word)
-              }
-              radius="lg"
-              style={{
-                height: "5rem",
-                width: "5rem",
-                backgroundColor: connectionData.selectedConnections.includes(
-                  word
-                )
-                  ? "gray"
-                  : "white",
-              }}
-              onPress={() => panelPress(word)}
             >
-              <CardBody>
-                <div
-                  className="text-center justify-center"
-                  style={{ fontSize: ".7rem" }}
-                >
-                  {word}
-                </div>
-              </CardBody>
-            </Card>
+              <Card
+                className="flex inline-block max-w-lg text-center justify-center"
+                isPressable={true}
+                radius="lg"
+                style={{
+                  height: "5rem",
+                  width: "5rem",
+                  backgroundColor: connectionData.selectedConnections.includes(
+                    word
+                  )
+                    ? "gray"
+                    : "white",
+                }}
+                onPress={() =>
+                  panelPress(
+                    word,
+                    !isMaxSelected ||
+                      connectionData.selectedConnections.includes(word)
+                  )
+                }
+              >
+                <CardBody>
+                  <div
+                    className="text-center justify-center"
+                    style={{ fontSize: ".7rem" }}
+                  >
+                    {word}
+                  </div>
+                </CardBody>
+              </Card>
+            </div>
           </div>
         ))}
       </div>
@@ -145,6 +177,13 @@ export default function IndexPage() {
         <Button color="success" variant="solid" onClick={() => submit()}>
           Submit
         </Button>
+        <div className="flex items-center justify-center mx-2">
+          {
+            <div className="flex inline-block text-center justify-center">
+              {rows}
+            </div>
+          }
+        </div>
       </div>
     </DefaultLayout>
   );
